@@ -11,8 +11,9 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 5 * * *"    # ~7h00 Paris (ete) : la veille complete
-    - cron: "30 10 * * *"  # ~12h30 Paris
-    - cron: "0 18 * * *"   # ~20h00 Paris
+    - cron: "0 9 * * *"    # ~11h00 Paris
+    - cron: "0 13 * * *"   # ~15h00 Paris
+    - cron: "30 17 * * *"  # ~19h30 Paris
 
 concurrency:
   group: refresh
