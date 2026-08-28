@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Console I3 : accès</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f1927;
+    font-family: "Montserrat", -apple-system, "Segoe UI", sans-serif;
+    color: #efefef;
+    padding: 24px;
+  }
+  .gate {
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+  }
+  .gate .logo {
+    font-weight: 900;
+    font-size: 1.3rem;
+    letter-spacing: -0.01em;
+    margin-bottom: 6px;
+  }
+  .gate .logo span { color: #80b9a5; }
+  .gate p {
+    color: rgba(239, 239, 239, 0.55);
+    font-size: 0.88rem;
+    margin-bottom: 26px;
+  }
+  .gate input {
+    width: 100%;
+    background: rgba(239, 239, 239, 0.07);
+    border: 1px solid rgba(239, 239, 239, 0.18);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 1rem;
+    color: #efefef;
+    text-align: center;
+    letter-spacing: 0.08em;
+    outline: none;
+  }
+  .gate input:focus { border-color: #80b9a5; }
+  .gate button {
+    width: 100%;
+    margin-top: 12px;
+    background: #80b9a5;
+    color: #0f1927;
+    border: 0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  .gate button:hover { background: #8fc4b1; }
+  .gate .err {
+    color: #de7362;
+    font-size: 0.84rem;
+    margin-top: 12px;
+    min-height: 1.2em;
+  }
+</style>
+</head>
+<body>
+<div class="gate">
+  <div class="logo">Console <span>Investisseurs 3.0</span></div>
+  <p>Entrez le code d'accès pour ouvrir la console de suivi.</p>
+  <form id="gateForm">
+    <input type="password" id="code" placeholder="Code d'accès" autocomplete="current-password" autofocus>
+    <button type="submit">Ouvrir la console</button>
+  </form>
+  <div class="err" id="err"></div>
+</div>
+<script>
+(function () {
+  var PAYLOAD = '__PAYLOAD__';
+  var ITER = 100000;
+
+  function b64ToBytes(b64) {
+    var bin = atob(b64);
+    var arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return arr;
+  }
+
+  async function decrypt(code) {
+    var raw = b64ToBytes(PAYLOAD);
+    // Format openssl : "Salted__" (8 octets) + sel (8 octets) + chiffré
+    var salt = raw.slice(8, 16);
+    var ct = raw.slice(16);
+    var baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(code), 'PBKDF2', false, ['deriveBits']);
+    var bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: salt, iterations: ITER }, baseKey, 384);
+    var bytes = new Uint8Array(bits);
+    var key = await crypto.subtle.importKey('raw', bytes.slice(0, 32), { name: 'AES-CBC' }, false, ['decrypt']);
+    var iv = bytes.slice(32, 48);
+    var plain = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: iv }, key, ct);
+    return new TextDecoder().decode(plain);
+  }
+
+  async function tryOpen(code, silent) {
+    try {
+      var html = await decrypt(code);
+      sessionStorage.setItem('i3console', code);
+      document.open();
+      document.write(html);
+      document.close();
+    } catch (e) {
+      sessionStorage.removeItem('i3console');
+      if (!silent) document.getElementById('err').textContent = 'Code incorrect, réessayez.';
+    }
+  }
+
+  document.getElementById('gateForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var code = document.getElementById('code').value.trim();
+    if (code) tryOpen(code, false);
+  });
+
+  // Code mémorisé pour la session du navigateur
+  var saved = sessionStorage.getItem('i3console');
+  if (saved) tryOpen(saved, true);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+name: Refresh console funnel
+
+# MAJ auto matin / midi / soir (heure de Paris, ete = UTC+2) + bouton « Mettre a jour maintenant »
+# de la page (drapeau refresh sur le pont -> relais telegram_bot.py -> workflow_dispatch ici).
+# Rafraichit Sheet closing (pont Apps Script) + Meta Ads (API Insights). Le releve pixel reste
+# manuel (Events Manager via le Chrome d'Alex) : on repart de data-block.enc (chiffre, cle DATA_KEY).
+
+on:
+  repository_dispatch:
+    types: [refresh]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * *"    # ~7h00 Paris (ete) : la veille complete
+    - cron: "30 10 * * *"  # ~12h30 Paris
+    - cron: "0 18 * * *"   # ~20h00 Paris
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: alexyoucompte99-lang/AlexI3
+          path: alexi3
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dependances
+        run: pip install --quiet openpyxl
+
+      - name: Dechiffrer le bloc de donnees precedent
+        env:
+          DATA_KEY: ${{ secrets.DATA_KEY }}
+        run: |
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 -md sha256 -base64 -A \
+            -pass env:DATA_KEY -in data-block.enc -out pipeline/data-block.js
+          head -c 120 pipeline/data-block.js | grep -q "var RELEVE" || (echo "dechiffrement KO"; exit 1)
+
+      - name: Sources (Sheet closing via le pont + Meta Ads)
+        env:
+          BRIDGE_URL: ${{ secrets.BRIDGE_URL }}
+          BRIDGE_KEY: ${{ secrets.BRIDGE_KEY }}
+          META_TOKEN: ${{ secrets.META_TOKEN }}
+          META_ACCOUNT: ${{ secrets.META_ACCOUNT }}
+          PARSE_XLSX: ${{ github.workspace }}/alexi3/pipeline/parse_xlsx.py
+        working-directory: pipeline
+        run: python fetch_sources.py
+
+      - name: Data block (releve pixel conserve, closing + ads rafraichis)
+        working-directory: pipeline
+        run: python gen_data.py --prev=data-block.js
+
+      - name: Page chiffree
+        env:
+          CONSOLE_CODE: ${{ secrets.PAGE_CODE }}
+          BRIDGE_URL: ${{ secrets.BRIDGE_URL }}
+          BRIDGE_KEY: ${{ secrets.BRIDGE_KEY }}
+        working-directory: pipeline
+        run: python build_page.py --out=../index.html
+
+      - name: Rechiffrer le bloc de donnees
+        env:
+          DATA_KEY: ${{ secrets.DATA_KEY }}
+        run: |
+          openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -md sha256 -salt -base64 -A \
+            -pass env:DATA_KEY -in pipeline/data-block.js -out data-block.enc
+
+      - name: Publier
+        run: |
+          git config user.name "console-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html data-block.enc
+          git diff --cached --quiet && echo "rien a publier" || \
+            (git commit -m "MAJ auto console funnel" && git pull --rebase && git push)
