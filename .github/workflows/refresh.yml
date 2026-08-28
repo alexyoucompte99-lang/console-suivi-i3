@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      TZ: Europe/Paris   # dates « relevés le » et bornes DAYS en heure de Paris
     steps:
       - uses: actions/checkout@v4
 
