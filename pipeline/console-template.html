@@ -376,7 +376,7 @@ __DATA__
 
   var TABS = {
     old: { hash: 'ancien', intro: '<strong>Ancien funnel</strong> : tunnel actuel. Pubs = campagnes VSL, page = pixel « Investisseurs 3.0 Tunnel » + VTurb + iClosed, calls = Sheet closing (hors webinaires). C\'est la référence à battre.', arrLabel: 'Arrivées réelles sur la page', arrSmall: 'landing page views Meta, pubs VSL', arrSrc: 'pubs' },
-    'new': { hash: 'nouveau', intro: '<strong>Nouveau funnel</strong> : LP VSL « Stratégie privée ». Pixel dédié depuis le 19 août à midi (page, player VTurb, calendrier iClosed « Appel Diagnostic - Club »), évènements de comportement depuis le 17 août, calls du calendrier Club dans le Sheet closing. Pas encore de campagne dédiée.', arrLabel: 'Arrivées sur la LP', arrSmall: 'PageView du pixel dédié, tout trafic', arrSrc: 'pixel' },
+    'new': { hash: 'nouveau', intro: '<strong>Nouveau funnel</strong> : LP VSL « Stratégie privée ». Pixel dédié depuis le 19 août à midi (page, player VTurb, calendrier iClosed « Appel Diagnostic - Club »), évènements de comportement depuis le 17 août, calls du calendrier Club dans le Sheet closing. Campagne dédiée « NEW VSL Funnel » en dépense depuis le 23 août.', arrLabel: 'Arrivées sur la LP', arrSmall: 'PageView du pixel dédié, tout trafic', arrSrc: 'pixel' },
     both: { hash: 'les2', intro: '<strong>Les 2 funnels cumulés</strong> sur la période (somme des deux pixels, des campagnes et des calendriers), puis le comparatif étape par étape ancien contre nouveau.', arrLabel: 'Arrivées réelles sur la page', arrSmall: 'landing page views Meta, toutes campagnes VSL', arrSrc: 'pubs' }
   };
   var curTab = 'old';
@@ -576,7 +576,7 @@ __DATA__
       { l: 'Coût par vente', v: s.cl.vente ? fmtEurP(a.spend / s.cl.vente) : '—', s: s.cl.ca ? 'CA ' + fmtEur(s.cl.ca) + ' · ROAS ' + (a.spend ? (s.cl.ca / a.spend).toFixed(1).replace('.', ',') : '—') : '' }
     ]);
     var note = document.getElementById('adsNote');
-    if (curTab === 'new') { note.hidden = false; note.className = 'note warn'; note.innerHTML = '<strong>Aucune campagne ne pointe encore vers la nouvelle LP.</strong> Dès qu\'une campagne dédiée existe (nom contenant « Stratégie privée », « nouvelle LP » ou « LP V2 »), ses clics, arrivées et dépenses apparaissent ici au relevé suivant.'; }
+    if (curTab === 'new' && !a.spend) { note.hidden = false; note.className = 'note warn'; note.innerHTML = '<strong>Aucune dépense sur la période pour les campagnes du nouveau funnel</strong> (noms contenant « Stratégie privée », « nouvelle LP », « LP V2 », « club » ou « NEW VSL »). Choisissez une période plus récente ou vérifiez le nom de la campagne.'; }
     else note.hidden = true;
   }
 
