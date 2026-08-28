@@ -493,12 +493,20 @@ __DATA__
   function renderState(s) {
     var all = sumsOf(S_NEW, allIdx());
     var tag = document.getElementById('newTag');
-    var test = all.pv < 300;
+    /* depense totale des campagnes du nouveau funnel (toute l'annee) + premiere date */
+    var adsFrom = null, adsTot = 0;
+    for (var ai = 0; ai < N; ai++) { var sp = NEW.ads.spend[ai] || 0; if (sp) { adsTot += sp; if (!adsFrom) adsFrom = ai; } }
+    var adsOn = adsTot > 10;
+    var test = all.pv < 300 && !adsOn;
     tag.hidden = !test;
     var box = document.getElementById('newEmpty');
-    if (curTab === 'new' && test) {
+    if (curTab === 'new' && all.pv < 300) {
       box.hidden = false;
-      box.innerHTML = '<strong>Le nouveau pixel ne reçoit que du trafic de test pour l\'instant</strong> : ' + fmt(all.pv) + ' arrivées sur la LP depuis le 19 août à midi (nos vérifications, pas de campagne). Le tracking est en place de bout en bout (page, VTurb, iClosed) : dès que les pubs envoient vers la nouvelle LP, cet onglet se remplit au relevé suivant.';
+      if (adsOn) {
+        box.innerHTML = '<strong>Les pubs tournent, le relevé pixel n\'a pas encore suivi</strong> : ' + fmtEur(adsTot) + ' dépensés sur les campagnes du nouveau funnel depuis le ' + dLabel(DAYS[adsFrom]) + ', mais les chiffres pixel de cet onglet (arrivées, vidéo, formulaires) s\'arrêtent au relevé manuel du ' + RELEVE + '. Les arrivées réelles et les coûts côté pubs sont déjà à jour dans le bloc « Des pubs à la page » ; le reste se met à niveau au prochain relevé pixel.';
+      } else {
+        box.innerHTML = '<strong>Le nouveau pixel ne reçoit que du trafic de test pour l\'instant</strong> : ' + fmt(all.pv) + ' arrivées sur la LP depuis le 19 août à midi (nos vérifications, pas de campagne). Le tracking est en place de bout en bout (page, VTurb, iClosed) : dès que les pubs envoient vers la nouvelle LP, cet onglet se remplit au relevé suivant.';
+      }
     } else box.hidden = true;
     var cov = document.getElementById('covNote');
     if (s.cov < s.n) {
