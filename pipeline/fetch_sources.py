@@ -4,7 +4,8 @@
     -> sources/investisseurs30.xlsx -> parse_xlsx.py (thomas-dashboard) -> sources/data_closing.json
   - ads Meta (API Insights, niveau campagne, quotidien, depuis le 1er janvier) -> sources/ads_daily_raw.json
 Puis agrege par jour et par funnel dans sources/daily_sources.json :
-  closing[funnel][jour] = {booked, present, noshow, reprog, annule, vente, ca, followup, rel}
+  closing[funnel][jour] = {booked, present, noshow, reprog, annule, vente, ca, followup, rel, resa}
+    booked = au jour du call ; resa = au jour de la reservation (comparable au pixel)
   ads[funnel][jour]     = {spend, clicks, link, lpv, vv}
 Funnel « new » = calendrier iClosed « Appel Diagnostic - Club Investisseurs 3.0 » (calls) et campagnes
 dont le nom matche NEW_CAMPAIGN_RE (ads) ; funnel « old » = le reste (calls des autres calendriers hors onglets webinaire, toutes les campagnes
@@ -106,6 +107,13 @@ def aggregate():
         day = closing[f][key]
         day['booked'] += 1
         if key != c['date']: day['rel'] += 1
+        # « resa » : le meme call, mais compte au jour ou il a ete RESERVE (colonne date de
+        # reservation du Sheet). C'est la seule mesure comparable au pixel (evenement Schedule /
+        # invitee_meeting_scheduled, envoye au moment de la reservation) : « booked » compte au
+        # jour du call, donc un call reserve le 28 pour le 4 du mois suivant sort de la fenetre.
+        # Repli sur la date du call quand la colonne est vide (frequent sur l'ancien funnel).
+        bd = (c.get('booking_date') or '')[:10] or key
+        if bd >= SINCE: closing[f][bd]['resa'] += 1
         su = (c.get('show_up') or '').upper()
         if su == 'OUI': day['present'] += 1
         elif su == 'NON': day['noshow'] += 1
@@ -130,7 +138,7 @@ def aggregate():
            'ads': {f: {k: {kk: (round(vv, 2) if kk == 'spend' else vv) for kk, vv in v.items()} for k, v in sorted(ads[f].items())} for f in ads}}
     json.dump(res, open(os.path.join(SRC, 'daily_sources.json'), 'w'), ensure_ascii=False)
     tot = lambda f, k: sum(v.get(k, 0) for v in closing[f].values())
-    print('closing old : booked', tot('old', 'booked'), 'present', tot('old', 'present'), 'ventes', tot('old', 'vente'), 'CA', tot('old', 'ca'), '| new : booked', tot('new', 'booked'), '| webi ignores', n_webi, '| doublons inter-onglets ignores', n_dup)
+    print('closing old : booked', tot('old', 'booked'), 'present', tot('old', 'present'), 'ventes', tot('old', 'vente'), 'CA', tot('old', 'ca'), '| new : booked', tot('new', 'booked'), 'resa', tot('new', 'resa'), '| webi ignores', n_webi, '| doublons inter-onglets ignores', n_dup)
     ta = lambda f, k: sum(v.get(k, 0) for v in ads[f].values())
     print('ads VSL old : link', ta('old', 'link'), 'lpv', ta('old', 'lpv'), 'spend', round(ta('old', 'spend')), '| new : lpv', ta('new', 'lpv'), '| campagnes ignorees (webinaire etc.) :', len(ignored))
 

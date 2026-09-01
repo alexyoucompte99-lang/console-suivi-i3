@@ -12,7 +12,7 @@ Modele :
   DAYS = tous les jours du 1er janvier de l'annee en cours a aujourd'hui
   OLD / NEW = { pv, v{0..95}, pot, qual, disq, rdv  (pixel ; null avant PIX_FROM = pas de donnee),
                 beh{...} (NEW seulement, pixel),
-                ads{spend, clicks, link, lpv, vv}, cl{booked, present, noshow, reprog, annule, vente, ca, followup} }
+                ads{spend, clicks, link, lpv, vv}, cl{booked, present, noshow, reprog, annule, vente, ca, followup, resa} }
 """
 import json, re, sys, os, datetime as dt
 
@@ -26,8 +26,8 @@ DAYS = [(YEAR_START + dt.timedelta(days=i)).isoformat() for i in range((today - 
 N = len(DAYS)
 PCTS = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95]
 BEH_KEYS = ['t30', 't1', 't2', 't3', 't5', 't10', 'play', 'v60', 'pitch', 'fs', 'cta', 'ctaF', 'ctaB', 's25', 's50', 's75', 's90',
-            'secThomas', 'secEtapes', 'secCtaF', 'secProof', 'secTemoin', 'tvClick', 'tGhislain', 'tLouis', 'tKim', 'tSophie', 'tLodois', 'exit', 'footer']
-CORE = ['pv', 'pot', 'qual', 'disq', 'rdv']
+            'secThomas', 'secEtapes', 'secCtaF', 'secProof', 'secTemoin', 'tvClick', 'tGhislain', 'tLouis', 'tKim', 'tSophie', 'tLodois', 'exit', 'footer', 'merci']
+CORE = ['pv', 'pot', 'qual', 'disq', 'rdv', 'sched']
 
 def parse_block(path):
     """Lit un data-block.js (formats v0 var D, v1 OLD/NEW 33 jours, v2 OLD/NEW annee) -> dict normalise {DAYS, RELEVE, OLD, NEW}."""
@@ -107,7 +107,7 @@ NEW['beh'] = {k: pix_arr(pix['NEW']['beh'][k]) for k in BEH_KEYS}
 SOURCES_AT = None
 src_path = os.path.join(HERE, 'sources', 'daily_sources.json')
 ADS_KEYS = ['spend', 'clicks', 'link', 'lpv', 'vv']
-CL_KEYS = ['booked', 'present', 'noshow', 'reprog', 'annule', 'vente', 'ca', 'followup', 'rel']
+CL_KEYS = ['booked', 'present', 'noshow', 'reprog', 'annule', 'vente', 'ca', 'followup', 'rel', 'resa']
 if os.path.exists(src_path):
     S = json.load(open(src_path))
     SOURCES_AT = S.get('fetched_at')
@@ -132,4 +132,4 @@ open(os.path.join(HERE, 'data-block.js'), 'w', encoding='utf-8').write(block)
 print('data-block.js ecrit :', N, 'jours du', DAYS[0], 'au', DAYS[-1], '| taille', len(block) // 1024, 'Ko')
 nz = lambda a: sum(x for x in a if x)
 print('controle OLD : pv', nz(OLD['pv']), 'rdv', nz(OLD['rdv']), 'lpv', nz(OLD['ads']['lpv']), 'booked', nz(OLD['cl']['booked']), 'present', nz(OLD['cl']['present']), 'ventes', nz(OLD['cl']['vente']))
-print('controle NEW : pv', nz(NEW['pv']), 'play', nz(NEW['beh']['play']), 'lpv', nz(NEW['ads']['lpv']), 'booked', nz(NEW['cl']['booked']))
+print('controle NEW : pv', nz(NEW['pv']), 'play', nz(NEW['beh']['play']), 'lpv', nz(NEW['ads']['lpv']), 'booked', nz(NEW['cl']['booked']), 'resa', nz(NEW['cl']['resa']), 'sched', nz(NEW['sched']))
